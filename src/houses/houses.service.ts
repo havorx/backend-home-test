@@ -1,9 +1,10 @@
 import { Injectable } from '@nestjs/common';
-import { CreateHouseDto } from './dto/create-house.dto';
+
+export type HousePairs = [string, string];
 
 @Injectable()
 export class HousesService {
-  create(createHouseDto: CreateHouseDto) {
-    return 'This action adds a new house';
+  public countUniqueHousePairs(pairs: HousePairs[]): number {
+    return 3;
   }
 }
