@@ -1,13 +1,20 @@
-import { Controller, Post, Body } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  UseInterceptors,
+  UploadedFile,
+} from '@nestjs/common';
 import { HousesService } from './houses.service';
-import { CreateHouseDto } from './dto/create-house.dto';
+import { FileInterceptor } from '@nestjs/platform-express';
 
 @Controller('houses')
 export class HousesController {
   constructor(private readonly housesService: HousesService) {}
 
-  @Post()
-  create(@Body() createHouseDto: CreateHouseDto) {
-    return this.housesService.create(createHouseDto);
+  @Post('csv-upload')
+  @UseInterceptors(FileInterceptor('file'))
+  uploadCSVFile(@UploadedFile() file: Express.Multer.File) {
+    console.log(file);
+    return { status: 'success', data: null, message: null };
   }
 }

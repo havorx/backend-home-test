@@ -1,1 +1,1 @@
-export class CreateHouseDto {}
+export class UploadCSVDto {}
