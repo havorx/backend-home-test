@@ -27,7 +27,7 @@ describe('HousesService', () => {
     ];
     const expectedOutput = 3;
 
-    const actualOutput = service.countUniqueHousePairs(input);
+    const actualOutput = service.countUniqueHouseAddress(input);
     expect(actualOutput).toEqual(expectedOutput);
   });
 });
