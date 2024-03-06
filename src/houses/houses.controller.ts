@@ -8,6 +8,7 @@ import {
 } from '@nestjs/common';
 import { HousesService } from './houses.service';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { ERROR_TYPE } from 'src/constants';
 
 @Controller('houses')
 export class HousesController {
@@ -28,8 +29,9 @@ export class HousesController {
     } catch (error) {
       throw new HttpException(
         {
-          message: error.message,
           statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
+          message: error.message,
+          errorType: ERROR_TYPE.INTERNAL_SERVER_ERROR,
         },
         HttpStatus.INTERNAL_SERVER_ERROR,
       );

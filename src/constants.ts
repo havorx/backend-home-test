@@ -1,3 +1,7 @@
-export const MESSAGE = {
-  FILE_STREAMING_FAILED: 'file streaming is failed',
-} as const;
+export const enum MESSAGE {
+  FILE_STREAMING_FAILED = 'file streaming is failed',
+}
+
+export const enum ERROR_TYPE {
+  INTERNAL_SERVER_ERROR = 'INTERNAL_SERVER_ERROR',
+}
