@@ -3,6 +3,8 @@ import {
   Post,
   UseInterceptors,
   UploadedFile,
+  HttpException,
+  HttpStatus,
 } from '@nestjs/common';
 import { HousesService } from './houses.service';
 import { FileInterceptor } from '@nestjs/platform-express';
@@ -13,8 +15,24 @@ export class HousesController {
 
   @Post('csv-upload')
   @UseInterceptors(FileInterceptor('file'))
-  uploadCSVFile(@UploadedFile() file: Express.Multer.File) {
-    console.log(file);
-    return { status: 'success', data: null, message: null };
+  async uploadCSVFile(@UploadedFile() file: Express.Multer.File) {
+    try {
+      const result = await this.housesService.countUniqueHouseAddressFromFile(
+        file.buffer,
+      );
+
+      return {
+        data: { uniqueAddressCount: result },
+        message: null,
+      };
+    } catch (error) {
+      throw new HttpException(
+        {
+          message: error.message,
+          statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
+        },
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
   }
 }
