@@ -36,38 +36,41 @@ export class HousesService {
   public convertCSVBufferToStream(fileBuffer: Buffer) {
     const records: HousePairs[] = [];
 
-    const parser = parse({ from_line: 2 });
+    const csvParser = parse({ from_line: 2 });
 
-    parser.on('readable', () => {
+    csvParser.on('readable', () => {
       let record: HousePairs;
 
-      while ((record = parser.read()) !== null) {
+      while ((record = csvParser.read()) !== null) {
         records.push(record);
       }
     });
 
-    parser.on('error', (err) => {
+    csvParser.on('error', (err) => {
       throw new HttpException(err.message, HttpStatus.INTERNAL_SERVER_ERROR);
     });
 
-    const streamFromFile = Readable.from(fileBuffer || []);
+    const streamFromFile = Readable.from(fileBuffer);
 
-    streamFromFile.pipe(parser);
+    streamFromFile.pipe(csvParser);
 
-    return { streamFromFile, records };
+    streamFromFile.on('end', () => {
+      csvParser.end();
+    });
+
+    return { csvParser, records };
   }
 
   public async countUniqueHouseAddressFromFile(fileBuffer: Buffer) {
-    const { streamFromFile, records } =
-      this.convertCSVBufferToStream(fileBuffer);
+    const { csvParser, records } = this.convertCSVBufferToStream(fileBuffer);
 
     return new Promise((resolve, reject) => {
-      streamFromFile.on('end', () => {
+      csvParser.on('end', () => {
         const count = this.countUniqueHouseAddress(records);
         resolve(count);
       });
 
-      streamFromFile.on('error', () => {
+      csvParser.on('error', () => {
         reject({ message: MESSAGE.FILE_STREAMING_FAILED });
       });
     });
