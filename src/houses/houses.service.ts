@@ -2,6 +2,7 @@ import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { parse } from 'csv-parse';
 import { ReadStream, createReadStream } from 'fs';
 import { MAXIMUM_ROWS_PER_BATCH, MESSAGE } from 'src/constants';
+import { finished } from 'stream/promises';
 
 export type HousePairs = [string, string];
 
@@ -41,12 +42,6 @@ export class HousesService {
   private convertCSVBufferToStream(fileStream: ReadStream) {
     // init csv parser with skipping headers option
     const csvParser = parse({ from_line: 2 });
-
-    // handle error when csv parser fails
-    csvParser.on('error', (err) => {
-      throw new HttpException(err.message, HttpStatus.INTERNAL_SERVER_ERROR);
-    });
-
     fileStream.pipe(csvParser);
 
     return csvParser;
@@ -54,10 +49,16 @@ export class HousesService {
 
   public async countUniqueHouseAddressFromFile(csvFile: Express.Multer.File) {
     const fileBufferStream = createReadStream(csvFile.path);
+
+    // handle error when csv parser fails
+    fileBufferStream.on('error', (err) => {
+      throw new HttpException(err.message, HttpStatus.INTERNAL_SERVER_ERROR);
+    });
+
     const csvParser = this.convertCSVBufferToStream(fileBufferStream);
 
     let totalCount = 0;
-    let prevPair: HousePairs;
+    let prevPair: HousePairs | undefined = undefined;
 
     let records: HousePairs[] = [];
 
@@ -78,19 +79,13 @@ export class HousesService {
       }
     });
 
-    return new Promise((resolve, reject) => {
-      csvParser.on('end', () => {
-        // process remaining parsed rows pushed to records when the parser ends the parsing
-        if (records.length > 0) {
-          const currentCount = this.countUniqueHouseAddress(records, prevPair);
-          totalCount += currentCount;
-        }
-        return resolve(totalCount);
-      });
+    await finished(csvParser);
+    // process remaining parsed rows pushed to records when the parser ends the parsing
+    if (records.length > 0) {
+      const currentCount = this.countUniqueHouseAddress(records, prevPair);
+      totalCount += currentCount;
+    }
 
-      csvParser.on('error', () => {
-        reject({ message: MESSAGE.FILE_STREAMING_FAILED });
-      });
-    });
+    return totalCount;
   }
 }
