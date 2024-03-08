@@ -1,53 +1,46 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { parse } from 'csv-parse';
 import { ReadStream, createReadStream } from 'fs';
-import { MESSAGE } from 'src/constants';
-import { Readable } from 'stream';
+import { MAXIMUM_ROWS_PER_BATCH, MESSAGE } from 'src/constants';
 
 export type HousePairs = [string, string];
 
 @Injectable()
 export class HousesService {
-  public countUniqueHouseAddress(pairs: HousePairs[]): number {
-    let count = 0;
-    let prevPair = null;
+  private countUniqueHouseAddress(pairs: HousePairs[], prevPair?: HousePairs) {
+    const pairsLength = pairs.length;
 
-    for (let i = 0; i < pairs.length; ++i) {
-      if (i === 0) {
+    let currentCount = 0;
+
+    for (let i = 0; i < pairsLength; ++i) {
+      // when the first csv batch is processed
+      // increase the initial count by 1 and assign the prevPair as the first row of the file
+      if (i === 0 && !prevPair) {
         prevPair = pairs[i];
-        ++count;
+        ++currentCount;
         continue;
       }
 
-      const [prevId, prevAddress] = prevPair;
-      const [currentId, currentAddress] = pairs[i];
+      if (prevPair) {
+        const [prevId, prevAddress] = prevPair;
+        const [currentId, currentAddress] = pairs[i];
 
-      if (prevId !== currentId) {
-        if (prevAddress !== currentAddress) {
-          ++count;
+        if (prevId !== currentId) {
+          if (prevAddress !== currentAddress) {
+            ++currentCount;
+          }
         }
-      }
 
-      prevPair = pairs[i];
+        prevPair = pairs[i];
+      }
     }
 
-    return count;
+    return currentCount;
   }
 
-  public convertCSVBufferToStream(fileStream: ReadStream) {
-    const records: HousePairs[] = [];
-
+  private convertCSVBufferToStream(fileStream: ReadStream) {
     // init csv parser with skipping headers option
     const csvParser = parse({ from_line: 2 });
-
-    // follow the csv parser docs
-    csvParser.on('readable', () => {
-      let record: HousePairs;
-
-      while ((record = csvParser.read()) !== null) {
-        records.push(record);
-      }
-    });
 
     // handle error when csv parser fails
     csvParser.on('error', (err) => {
@@ -56,24 +49,43 @@ export class HousesService {
 
     fileStream.pipe(csvParser);
 
-    // end the csvParser write stream when the file data stream is ended
-    fileStream.on('end', () => {
-      csvParser.end();
-    });
-
-    return { csvParser, records };
+    return csvParser;
   }
 
   public async countUniqueHouseAddressFromFile(csvFile: Express.Multer.File) {
     const fileBufferStream = createReadStream(csvFile.path);
+    const csvParser = this.convertCSVBufferToStream(fileBufferStream);
 
-    const { csvParser, records } =
-      this.convertCSVBufferToStream(fileBufferStream);
+    let totalCount = 0;
+    let prevPair: HousePairs;
+
+    let records: HousePairs[] = [];
+
+    // push into the array input each time the parser emit a parsed chunk
+    csvParser.on('data', (data) => {
+      records.push(data);
+
+      // when parser parses enough data per batch, process the batch
+      if (records.length === MAXIMUM_ROWS_PER_BATCH) {
+        const currentCount = this.countUniqueHouseAddress(records, prevPair);
+        totalCount += currentCount;
+
+        // last pair of the current batch to be used in the next batch
+        prevPair = records[records.length - 1];
+
+        // reset the array input to prepare for the next batch
+        records = [];
+      }
+    });
 
     return new Promise((resolve, reject) => {
       csvParser.on('end', () => {
-        const count = this.countUniqueHouseAddress(records);
-        resolve(count);
+        // process remaining parsed rows pushed to records when the parser ends the parsing
+        if (records.length > 0) {
+          const currentCount = this.countUniqueHouseAddress(records, prevPair);
+          totalCount += currentCount;
+        }
+        return resolve(totalCount);
       });
 
       csvParser.on('error', () => {
