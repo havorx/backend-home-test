@@ -1,5 +1,6 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { parse } from 'csv-parse';
+import { ReadStream, createReadStream } from 'fs';
 import { MESSAGE } from 'src/constants';
 import { Readable } from 'stream';
 
@@ -33,11 +34,13 @@ export class HousesService {
     return count;
   }
 
-  public convertCSVBufferToStream(fileBuffer: Buffer) {
+  public convertCSVBufferToStream(fileStream: ReadStream) {
     const records: HousePairs[] = [];
 
+    // init csv parser with skipping headers option
     const csvParser = parse({ from_line: 2 });
 
+    // follow the csv parser docs
     csvParser.on('readable', () => {
       let record: HousePairs;
 
@@ -46,23 +49,26 @@ export class HousesService {
       }
     });
 
+    // handle error when csv parser fails
     csvParser.on('error', (err) => {
       throw new HttpException(err.message, HttpStatus.INTERNAL_SERVER_ERROR);
     });
 
-    const streamFromFile = Readable.from(fileBuffer);
+    fileStream.pipe(csvParser);
 
-    streamFromFile.pipe(csvParser);
-
-    streamFromFile.on('end', () => {
+    // end the csvParser write stream when the file data stream is ended
+    fileStream.on('end', () => {
       csvParser.end();
     });
 
     return { csvParser, records };
   }
 
-  public async countUniqueHouseAddressFromFile(fileBuffer: Buffer) {
-    const { csvParser, records } = this.convertCSVBufferToStream(fileBuffer);
+  public async countUniqueHouseAddressFromFile(csvFile: Express.Multer.File) {
+    const fileBufferStream = createReadStream(csvFile.path);
+
+    const { csvParser, records } =
+      this.convertCSVBufferToStream(fileBufferStream);
 
     return new Promise((resolve, reject) => {
       csvParser.on('end', () => {

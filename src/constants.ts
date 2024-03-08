@@ -5,3 +5,5 @@ export const enum MESSAGE {
 export const enum ERROR_TYPE {
   INTERNAL_SERVER_ERROR = 'INTERNAL_SERVER_ERROR',
 }
+
+export const UPLOAD_CSV_DEST = '/tmp/upload/csv-files';
