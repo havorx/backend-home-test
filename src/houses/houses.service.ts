@@ -1,13 +1,14 @@
-import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
-import { parse } from 'csv-parse';
-import { ReadStream, createReadStream } from 'fs';
-import { MAXIMUM_ROWS_PER_BATCH, MESSAGE } from 'src/constants';
+import { Injectable } from '@nestjs/common';
+import { MAXIMUM_ROWS_PER_BATCH } from 'src/constants';
+import { CsvService } from 'src/csv/csv.service';
 import { finished } from 'stream/promises';
 
 export type HousePairs = [string, string];
 
 @Injectable()
 export class HousesService {
+  constructor(private readonly csvService: CsvService) {}
+
   private countUniqueHouseAddress(pairs: HousePairs[], prevPair?: HousePairs) {
     const pairsLength = pairs.length;
 
@@ -39,23 +40,10 @@ export class HousesService {
     return currentCount;
   }
 
-  private convertCSVBufferToStream(fileStream: ReadStream) {
-    // init csv parser with skipping headers option
-    const csvParser = parse({ from_line: 2 });
-    fileStream.pipe(csvParser);
-
-    return csvParser;
-  }
-
   public async countUniqueHouseAddressFromFile(csvFile: Express.Multer.File) {
-    const fileBufferStream = createReadStream(csvFile.path);
-
-    // handle error when csv parser fails
-    fileBufferStream.on('error', (err) => {
-      throw new HttpException(err.message, HttpStatus.INTERNAL_SERVER_ERROR);
-    });
-
-    const csvParser = this.convertCSVBufferToStream(fileBufferStream);
+    const fileBufferStream = this.csvService.createFileReadStream(csvFile);
+    const csvParser =
+      this.csvService.convertCSVBufferToParserStream(fileBufferStream);
 
     let totalCount = 0;
     let prevPair: HousePairs | undefined = undefined;

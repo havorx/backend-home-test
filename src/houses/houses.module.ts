@@ -3,6 +3,7 @@ import { HousesService } from './houses.service';
 import { HousesController } from './houses.controller';
 import { MulterModule } from '@nestjs/platform-express';
 import { UPLOAD_CSV_DEST } from 'src/constants';
+import { CsvService } from 'src/csv/csv.service';
 
 @Module({
   imports: [
@@ -11,6 +12,6 @@ import { UPLOAD_CSV_DEST } from 'src/constants';
     }),
   ],
   controllers: [HousesController],
-  providers: [HousesService],
+  providers: [HousesService, CsvService],
 })
 export class HousesModule {}
