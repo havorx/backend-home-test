@@ -11,8 +11,13 @@ import {
 } from '@nestjs/common';
 import { HousesService } from './houses.service';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { ERROR_TYPE, UPLOAD_CSV_DEST } from 'src/constants';
+import {
+  CSV_FILE_SIZE_LIMIT,
+  ERROR_TYPE,
+  UPLOAD_CSV_DEST,
+} from 'src/constants';
 import { diskStorage } from 'multer';
+import { createUniqueFileName } from 'src/utils';
 
 @Controller('houses')
 export class HousesController {
@@ -23,6 +28,9 @@ export class HousesController {
     FileInterceptor('file', {
       storage: diskStorage({
         destination: UPLOAD_CSV_DEST,
+        filename(_, file, callback) {
+          callback(null, createUniqueFileName(file.originalname));
+        },
       }),
     }),
   )
@@ -30,7 +38,7 @@ export class HousesController {
     @UploadedFile(
       new ParseFilePipe({
         validators: [
-          new MaxFileSizeValidator({ maxSize: 500000 }),
+          new MaxFileSizeValidator({ maxSize: CSV_FILE_SIZE_LIMIT }),
           new FileTypeValidator({ fileType: 'text/csv' }),
         ],
       }),
