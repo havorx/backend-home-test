@@ -9,7 +9,21 @@ export type HousePairs = [string, string];
 export class HousesService {
   constructor(private readonly csvService: CsvService) {}
 
-  public countUniqueHouseAddress(pairs: HousePairs[], prevPair?: HousePairs) {
+  /**
+   * @param {HousePairs[]} pairs - the input array
+   * @param prevPair - optional param to assign the last pair of the previous chunk
+   * after the first chunk
+   * @returns {number}  the current count of a chunk
+   *
+   * The function works with the assumption that the csv files is sorted by the ids
+   * which is usual as it can be from a database sorted query
+   *
+   * Time complexity is O(n)
+   */
+  public countUniqueHouseAddress(
+    pairs: HousePairs[],
+    prevPair?: HousePairs,
+  ): number {
     const pairsLength = pairs.length;
 
     let currentCount = 0;
@@ -40,7 +54,19 @@ export class HousesService {
     return currentCount;
   }
 
-  public async countUniqueHouseAddressFromFile(csvFile: Express.Multer.File) {
+  /**
+   * @param csvFile - the input csv file from the request controller
+   * @returns {Promise<number>} return the total count of the csv file after every chunks have been processed
+   *
+   * create the csv file stream and csv parser, then pipe the file stream to the parser
+   * each time the parser parses and emit a row, append it to the temp array for chunk accumulation
+   *
+   * when the array hit the chunk size limit, process the array and reset it to release the memory
+   * this will avoid having too much items, causing the node instance to be out of memory
+   */
+  public async countUniqueHouseAddressFromFile(
+    csvFile: Express.Multer.File,
+  ): Promise<number> {
     const fileBufferStream = this.csvService.createFileReadStream(csvFile);
     const csvParser =
       this.csvService.convertCSVBufferToParserStream(fileBufferStream);

@@ -21,7 +21,7 @@ import { createUniqueFileName } from 'src/utils';
 
 @Controller('houses')
 export class HousesController {
-  constructor(private readonly housesService: HousesService) { }
+  constructor(private readonly housesService: HousesService) {}
 
   @Post('csv-upload')
   @UseInterceptors(
