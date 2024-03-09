@@ -1,0 +1,13 @@
+version: '1.0'
+services:
+  backend-home-test:
+    image: backend-home-test
+    build:
+      context: .
+      dockerfile: ./docker/Dockerfile
+    # env_file: .cache/.env
+    expose:
+      - '3000'
+    ports:
+      - '3000:3000'
+    container_name: backend-home-test
