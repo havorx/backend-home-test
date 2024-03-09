@@ -9,7 +9,7 @@ export type HousePairs = [string, string];
 export class HousesService {
   constructor(private readonly csvService: CsvService) {}
 
-  private countUniqueHouseAddress(pairs: HousePairs[], prevPair?: HousePairs) {
+  public countUniqueHouseAddress(pairs: HousePairs[], prevPair?: HousePairs) {
     const pairsLength = pairs.length;
 
     let currentCount = 0;

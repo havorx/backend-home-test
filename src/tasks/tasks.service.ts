@@ -7,6 +7,9 @@ import { UPLOAD_CSV_DEST } from 'src/constants';
 export class TasksService {
   private readonly logger = new Logger(TasksService.name);
 
+  /**
+   * A cronjob for iterating through every matched files that is last modified older than a preset time and deleting them one by one
+   */
   @Cron(CronExpression.EVERY_10_SECONDS)
   deleteProcessedCsvFileCron() {
     fs.readdirSync(UPLOAD_CSV_DEST).forEach((file) => {

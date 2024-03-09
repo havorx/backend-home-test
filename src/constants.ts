@@ -1,6 +1,6 @@
-export const enum ERROR_TYPE {
-  INTERNAL_SERVER_ERROR = 'INTERNAL_SERVER_ERROR',
-}
+export const ERROR_TYPE = {
+  INTERNAL_SERVER_ERROR: 'INTERNAL_SERVER_ERROR',
+} as const;
 
 export const UPLOAD_CSV_DEST = '/tmp/upload/csv-files';
 
