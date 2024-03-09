@@ -8,6 +8,7 @@ import {
   ParseFilePipe,
   MaxFileSizeValidator,
   FileTypeValidator,
+  HttpCode,
 } from '@nestjs/common';
 import { HousesService } from './houses.service';
 import { FileInterceptor } from '@nestjs/platform-express';
@@ -18,11 +19,38 @@ import {
 } from 'src/constants';
 import { diskStorage } from 'multer';
 import { createUniqueFileName } from 'src/utils';
+import {
+  ApiBody,
+  ApiConsumes,
+  ApiOperation,
+  ApiResponse,
+  ApiTags,
+} from '@nestjs/swagger';
+import { CSVUploadResponse } from './dto/csv-upload.dto';
 
 @Controller('houses')
 export class HousesController {
   constructor(private readonly housesService: HousesService) {}
 
+  @ApiTags('csv-upload')
+  @ApiOperation({ summary: 'Count unique data from csv file' })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        file: {
+          type: 'string',
+          format: 'binary',
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    type: CSVUploadResponse,
+    status: 200,
+  })
+  @HttpCode(200)
   @Post('csv-upload')
   @UseInterceptors(
     FileInterceptor('file', {
@@ -51,7 +79,6 @@ export class HousesController {
 
       return {
         data: { uniqueAddressCount: result },
-        message: null,
       };
     } catch (error) {
       throw new HttpException(
